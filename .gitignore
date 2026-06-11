@@ -1,0 +1,36 @@
+# Python
+__pycache__/
+*.py[cod]
+*.egg-info/
+dist/
+build/
+*.egg
+
+# Virtual environment
+.venv/
+venv/
+
+# uv
+uv.lock
+
+# Environment & config
+.env
+.env.local
+*.toml.local
+
+# IDE
+.vscode/
+.idea/
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Project runtime
+sessions/
+.tasks/
+*.jsonl
+
+# Logs
+*.log
+logs/
