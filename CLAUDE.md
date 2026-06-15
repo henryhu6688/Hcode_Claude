@@ -63,7 +63,14 @@ hcode CLI ── TCP:NDJSON ──→ hcode-core daemon
 - 测试目录 `tests/` 镜像 `src/` 结构
 - `pyproject.toml` 中依赖写兼容范围，`uv.lock` 锁精确版本
 
+## 关键约定
+
+- **🔴 改代码前必须先拉分支**：`git checkout -b vX_feature_name`，格式 `v{stage}_{feature}`，如 `v1_agent_loop`。**禁止在 master 直接提交**
+- **删除等不可逆操作必须先确认**：`rm`、`git branch -D`、`git push --force` 等需用户明确同意
+- **功能开发严格按 Superpowers 工作流**：不允许跳过环节
+
 ## 开发流程
 
-严格遵循 superpowers 流程：`brainstorming → writing-plans → executing-plans → verification → code-review → branch-complete`。
+`brainstorming → writing-plans → executing-plans → verification → code-review → branch-complete`。
 每阶段结束都能独立运行和验证。
+分支命名：`v{stage}_{feature}`，如 `v1_agent_loop`、`v2_event_stream`。
