@@ -111,23 +111,27 @@ testpaths = ["tests"]
 asyncio_mode = "auto"
 ```
 
-- [ ] **Step 2: 创建所有包目录的 `__init__.py`**
+- [ ] **Step 2: 创建所有包目录和 `__init__.py`**
 
-Run:
 ```bash
 mkdir -p src/hcode_claude/core/protocol src/hcode_claude/core/transport src/hcode_claude/cli tests/core/protocol tests/cli scripts
-touch src/hcode_claude/__init__.py
-touch src/hcode_claude/core/__init__.py
-touch src/hcode_claude/core/protocol/__init__.py
-touch src/hcode_claude/core/transport/__init__.py
-touch src/hcode_claude/cli/__init__.py
-touch tests/__init__.py
-touch tests/core/__init__.py
-touch tests/core/protocol/__init__.py
-touch tests/cli/__init__.py
 ```
 
-注意：Windows 上 `touch` 可能不存在，用 `New-Item` 或直接 "" > file。
+Write empty `__init__.py` files（Windows 兼容）：
+
+```bash
+echo. > src/hcode_claude/__init__.py
+echo. > src/hcode_claude/core/__init__.py
+echo. > src/hcode_claude/core/protocol/__init__.py
+echo. > src/hcode_claude/core/transport/__init__.py
+echo. > src/hcode_claude/cli/__init__.py
+echo. > tests/__init__.py
+echo. > tests/core/__init__.py
+echo. > tests/core/protocol/__init__.py
+echo. > tests/cli/__init__.py
+```
+
+注意：Windows 上 `echo.` 创建空文件，Unix 上用 `touch`。
 
 - [ ] **Step 3: 写入 `src/hcode_claude/core/__init__.py` — 版本号**
 
@@ -1084,7 +1088,6 @@ git commit -m "feat: add TCP NDJSON SocketServer with JSON-RPC dispatch"
 import asyncio
 import json
 import os
-import signal
 import subprocess
 import sys
 import time
@@ -1097,8 +1100,9 @@ import pytest
 # 设计：用 free_port 启动子进程 daemon，轮询 TCP 直到可达，发请求并验证响应
 @pytest.mark.asyncio
 async def test_daemon_ping_pong(free_port: int, tmp_path: Path):
-    # 确保 daemon 有代码可跑（使用 uv run）
+    # 确保 daemon 有代码可跑（PYTHONPATH=src 使其能找到 hcode_claude）
     env = os.environ.copy()
+    env["PYTHONPATH"] = "src"
     env["HCODE_PORT"] = str(free_port)
     env["HCODE_LOG_FILE"] = str(tmp_path / "hcode.log")
     env["HCODE_HOME"] = str(tmp_path)  # 避免读取真实的 ~/.hcode/config.toml
@@ -1159,8 +1163,8 @@ async def test_daemon_ping_pong(free_port: int, tmp_path: Path):
         assert response["result"]["server_version"] == "0.0.1"
 
     finally:
-        # 不管测试结果如何都要杀掉 daemon
-        proc.send_signal(signal.SIGTERM)
+        # 不管测试结果如何都要杀掉 daemon（跨平台 terminate）
+        proc.terminate()
         try:
             proc.wait(timeout=5)
         except subprocess.TimeoutExpired:
@@ -1287,31 +1291,38 @@ git commit -m "feat: add CoreApp daemon with ping handler and integration test"
 ```python
 """CLI 入口测试"""
 
+import os
 import subprocess
 import sys
 
 import pytest
 
+# 确保 src/ 在 PYTHONPATH 中——uv sync 不做 editable install，子进程需要显式路径
+_TESTS_ENV = os.environ.copy()
+_TESTS_ENV["PYTHONPATH"] = "src"
+
 
 # 功能：验证 hcode --version 输出 "hcode v0.0.1"
-# 设计：用 subprocess 调用 uv run hcode --version，断言 stdout 含版本号
+# 设计：用 subprocess 调用 python -m hcode_claude.cli.main --version，PYTHONPATH=src
 def test_cli_version():
     result = subprocess.run(
         [sys.executable, "-m", "hcode_claude.cli.main", "--version"],
         capture_output=True,
         text=True,
+        env=_TESTS_ENV,
     )
     assert result.returncode == 0
     assert "hcode v0.0.1" in result.stdout.strip()
 
 
 # 功能：验证 hcode --help 输出使用说明
-# 设计：无参数调用默认显示 help
+# 设计：无参数调用默认显示 help，PYTHONPATH=src
 def test_cli_help():
     result = subprocess.run(
         [sys.executable, "-m", "hcode_claude.cli.main", "--help"],
         capture_output=True,
         text=True,
+        env=_TESTS_ENV,
     )
     assert result.returncode == 0
     assert "hcode ping" in result.stdout
@@ -1328,6 +1339,7 @@ def test_ping_without_daemon_fails():
         ],
         capture_output=True,
         text=True,
+        env=_TESTS_ENV,
     )
     assert result.returncode != 0
 ```
