@@ -40,7 +40,7 @@ async def test_daemon_ping_pong(free_port: int, tmp_path: Path):
                 )
                 connected = True
                 break
-            except (ConnectionRefusedError, OSError, asyncio.TimeoutError):
+            except (TimeoutError, ConnectionRefusedError, OSError):
                 if proc.poll() is not None:
                     # daemon 已经挂了
                     stdout, stderr = proc.communicate()

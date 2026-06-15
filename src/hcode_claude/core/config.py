@@ -5,6 +5,7 @@ import sys
 import tomllib
 from dataclasses import dataclass
 from pathlib import Path
+from typing import Any
 
 # S0 合法配置键集合
 _VALID_KEYS = {"host", "port", "log_level", "log_file", "log_format"}
@@ -84,11 +85,13 @@ def _load_env_values() -> dict[str, object]:
     return result
 
 
-# 类型转换：将字符串值转为目标字段类型
-def _coerce(key: str, value: object) -> object:
-    if key == "port":
-        return int(value)
+# 类型转换：将字符串值转为目标字段类型（返回明确类型以通过 mypy strict）
+def _coerce_str(key: str, value: object) -> str:
     return str(value)
+
+
+def _coerce_int(key: str, value: object) -> int:
+    return int(value)  # type: ignore[call-overload,no-any-return]
 
 
 # 加载配置：四级合并（内建默认 → ~/.hcode/config.toml → .env → 环境变量）
@@ -109,11 +112,11 @@ def load_config() -> Config:
 
     # 类型转换
     return Config(
-        host=_coerce("host", merged["host"]),
-        port=_coerce("port", merged["port"]),
-        log_level=_coerce("log_level", merged["log_level"]),
-        log_file=_coerce("log_file", merged["log_file"]),
-        log_format=_coerce("log_format", merged["log_format"]),
+        host=_coerce_str("host", merged["host"]),
+        port=_coerce_int("port", merged["port"]),
+        log_level=_coerce_str("log_level", merged["log_level"]),
+        log_file=_coerce_str("log_file", merged["log_file"]),
+        log_format=_coerce_str("log_format", merged["log_format"]),
     )
 
 
@@ -132,7 +135,7 @@ def setup_logging(cfg: Config) -> None:
         else structlog.processors.JSONRenderer()
     )
 
-    processors = [
+    processors: list[Any] = [
         structlog.stdlib.add_log_level,
         structlog.stdlib.add_logger_name,
         structlog.processors.TimeStamper(fmt="iso"),

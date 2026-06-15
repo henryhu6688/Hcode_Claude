@@ -37,7 +37,7 @@ async def _ping(host: str, port: int, nonce: str) -> None:
             asyncio.open_connection(host, port),
             timeout=5.0,
         )
-    except (ConnectionRefusedError, OSError, asyncio.TimeoutError):
+    except (TimeoutError, ConnectionRefusedError, OSError):
         print(f"无法连接到 daemon ({host}:{port})", file=sys.stderr)
         sys.exit(1)
 

@@ -6,16 +6,16 @@ import pytest
 from pydantic import ValidationError
 
 from hcode_claude.core.protocol.envelope import (
+    INTERNAL_ERROR,
+    INVALID_PARAMS,
+    INVALID_REQUEST,
     JSONRPC_VERSION,
+    METHOD_NOT_FOUND,
+    PARSE_ERROR,
     ErrorDetail,
     ErrorResponse,
     Request,
     SuccessResponse,
-    INTERNAL_ERROR,
-    INVALID_PARAMS,
-    INVALID_REQUEST,
-    METHOD_NOT_FOUND,
-    PARSE_ERROR,
 )
 
 

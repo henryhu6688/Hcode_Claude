@@ -52,8 +52,9 @@ class CoreApp:
         await server.stop()
 
     # 处理 core.ping 请求：提取 nonce，返回 PongResult
-    async def _handle_ping(self, params: dict) -> PongResult:
-        nonce = params.get("nonce", "") if isinstance(params, dict) else ""
+    async def _handle_ping(self, params: dict[str, object]) -> PongResult:
+        nonce_raw = params.get("nonce", "")
+        nonce = str(nonce_raw) if nonce_raw else ""
         return PongResult(
             type="pong",
             nonce=nonce,

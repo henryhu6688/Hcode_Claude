@@ -19,7 +19,7 @@ from hcode_claude.core.protocol.envelope import (
 )
 
 # JSON-RPC handler 签名：接收 params dict，返回可序列化的 result
-Handler = Callable[[dict], Awaitable[object]]
+Handler = Callable[[dict[str, object]], Awaitable[object]]
 
 
 class SocketServer:
@@ -142,7 +142,7 @@ class SocketServer:
             params = {}
         try:
             result = await handler(params)
-            return SuccessResponse(id=req_id, result=result)
+            return SuccessResponse(id=req_id, result=result)  # type: ignore[arg-type]
         except Exception as exc:
             return ErrorResponse(
                 id=req_id,
