@@ -49,3 +49,28 @@ def test_ping_without_daemon_fails():
         env=_TESTS_ENV,
     )
     assert result.returncode != 0
+
+
+# 功能：验证 hcode run 不带 --goal 时报错
+# 设计：--goal 是必须参数，缺少时应输出错误信息并 exit 非 0
+def test_run_without_goal_fails():
+    result = subprocess.run(
+        [sys.executable, "-m", "hcode_claude.cli.main", "run"],
+        capture_output=True, text=True, env=_TESTS_ENV,
+    )
+    assert result.returncode != 0
+    assert "goal" in result.stderr.lower()
+
+
+# 功能：验证 hcode run 带 --goal 但 daemon 未启动时报连接错误
+# 设计：daemon 未启动时应在 5s 内超时报连接失败
+def test_run_without_daemon_fails():
+    result = subprocess.run(
+        [
+            sys.executable, "-m", "hcode_claude.cli.main",
+            "run", "--goal", "test", "--port", "1",
+        ],
+        capture_output=True, text=True, env=_TESTS_ENV,
+        timeout=10,
+    )
+    assert result.returncode != 0

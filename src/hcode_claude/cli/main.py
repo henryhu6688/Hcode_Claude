@@ -6,7 +6,7 @@ import sys
 from uuid import uuid4
 
 from hcode_claude.core import __version__
-from hcode_claude.core.protocol.commands import PongResult
+from hcode_claude.core.protocol.commands import PongResult, RunResult
 from hcode_claude.core.protocol.envelope import ErrorResponse, Request
 
 
@@ -22,6 +22,12 @@ def main() -> None:
         ))
     elif sys.argv[1] == "--version":
         _version()
+    elif sys.argv[1] == "run":
+        asyncio.run(_run(
+            host=_parse_arg("--host", "127.0.0.1"),
+            port=int(_parse_arg("--port", "47201")),
+            max_steps=int(_parse_arg("--max-steps", "20")),
+        ))
     elif sys.argv[1] == "--help":
         _usage()
     else:
@@ -63,6 +69,48 @@ async def _ping(host: str, port: int, nonce: str) -> None:
     print(f"pong from {result.server_version} (nonce={result.nonce})")
 
 
+# 发送 agent.run 请求到 daemon，等待完成并打印结果
+async def _run(host: str, port: int, max_steps: int) -> None:
+    goal = _parse_arg("--goal", "")
+    if not goal:
+        print("Error: --goal is required", file=sys.stderr)
+        sys.exit(1)
+
+    try:
+        reader, writer = await asyncio.wait_for(
+            asyncio.open_connection(host, port),
+            timeout=5.0,
+        )
+    except (TimeoutError, ConnectionRefusedError, OSError):
+        print(f"无法连接到 daemon ({host}:{port})", file=sys.stderr)
+        sys.exit(1)
+
+    request = Request(
+        id=uuid4().hex[:8],
+        method="agent.run",
+        params={"goal": goal, "max_steps": max_steps},
+    )
+    writer.write(request.model_dump_json().encode() + b"\n")
+    await writer.drain()
+
+    # 等待响应（可能很久——不加超时）
+    line = await reader.readline()
+    writer.close()
+
+    data = json.loads(line.decode())
+
+    if "error" in data:
+        err = ErrorResponse(**data)
+        print(f"Error [{err.error.code}]: {err.error.message}", file=sys.stderr)
+        sys.exit(1)
+
+    result = RunResult(**data["result"])
+    print(f"{result.status} in {result.steps} steps")
+    print(f"run_id: {result.run_id}")
+    if result.output:
+        print()
+        print(result.output)
+
 # 打印 CLI 版本号
 def _version() -> None:
     print(f"hcode v{__version__}")
@@ -77,6 +125,11 @@ def _usage() -> None:
     print("                --host HOST   (default 127.0.0.1)")
     print("                --port PORT   (default 47201)")
     print("                --nonce NONCE (default random)")
+    print("  hcode run     Run an agent goal")
+    print("                --goal GOAL   (required)")
+    print("                --max-steps N (default 20)")
+    print("                --host HOST   (default 127.0.0.1)")
+    print("                --port PORT   (default 47201)")
     print("  hcode --version  Show version")
     print("  hcode --help     Show this help")
 
