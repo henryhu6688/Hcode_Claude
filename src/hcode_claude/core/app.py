@@ -2,13 +2,16 @@
 
 import asyncio
 import signal
+from pathlib import Path
+from uuid import uuid4
 
 import structlog
 
 from hcode_claude.core import __version__
 from hcode_claude.core.config import load_config, setup_logging
-from hcode_claude.core.protocol.commands import PongResult
+from hcode_claude.core.protocol.commands import PongResult, RunResult
 from hcode_claude.core.protocol.events import CoreStartedEvent
+from hcode_claude.core.runner import AgentRunner
 from hcode_claude.core.transport.socket_server import SocketServer
 
 
@@ -27,8 +30,9 @@ class CoreApp:
         # 3. 创建 SocketServer
         server = SocketServer(cfg.host, cfg.port)
 
-        # 4. 注册 core.ping handler
+        # 4. 注册 handler
         server.register("core.ping", self._handle_ping)
+        server.register("agent.run", self._handle_run)
 
         # 5. 端口探测 + bind
         await server.start()
@@ -59,6 +63,25 @@ class CoreApp:
             type="pong",
             nonce=nonce,
             server_version=__version__,
+        )
+
+    # 处理 agent.run 请求：提取 goal + max_steps，创建 AgentRunner 执行
+    async def _handle_run(self, params: dict[str, object]) -> RunResult:
+        goal = str(params.get("goal", ""))
+        max_steps_raw = params.get("max_steps", 20)
+        max_steps = int(max_steps_raw) if max_steps_raw else 20  # type: ignore[arg-type]
+
+        run_dir = Path.cwd() / ".hcode" / "runs" / uuid4().hex[:8]
+        run_dir.mkdir(parents=True, exist_ok=True)
+
+        runner = AgentRunner()
+        result = await runner.run(goal=goal, run_dir=run_dir)
+        return RunResult(
+            type="run.result",
+            run_id=result.run_id,
+            status=result.status,
+            steps=result.steps,
+            output=result.output,
         )
 
     # 注册 SIGINT/SIGTERM handler 到 event loop（Windows 不支持则跳过）
