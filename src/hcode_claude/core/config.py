@@ -8,7 +8,8 @@ from pathlib import Path
 from typing import Any
 
 # S0 合法配置键集合
-_VALID_KEYS = {"host", "port", "log_level", "log_file", "log_format"}
+_VALID_KEYS = {"host", "port", "log_level", "log_file", "log_format",
+               "anthropic_api_key", "anthropic_model", "max_steps", "tool_timeout"}
 
 # 内建默认值
 _DEFAULTS: dict[str, object] = {
@@ -17,6 +18,10 @@ _DEFAULTS: dict[str, object] = {
     "log_level": "INFO",
     "log_file": "",
     "log_format": "console",
+    "anthropic_api_key": "",
+    "anthropic_model": "claude-sonnet-4-6",
+    "max_steps": 20,
+    "tool_timeout": 60,
 }
 
 # env var → config key 映射
@@ -26,6 +31,10 @@ _ENV_MAP = {
     "HCODE_LOG_LEVEL": "log_level",
     "HCODE_LOG_FILE": "log_file",
     "HCODE_LOG_FORMAT": "log_format",
+    "HCODE_ANTHROPIC_API_KEY": "anthropic_api_key",
+    "HCODE_ANTHROPIC_MODEL": "anthropic_model",
+    "HCODE_MAX_STEPS": "max_steps",
+    "HCODE_TOOL_TIMEOUT": "tool_timeout",
 }
 
 
@@ -38,6 +47,10 @@ class Config:
     log_level: str
     log_file: str
     log_format: str
+    anthropic_api_key: str
+    anthropic_model: str
+    max_steps: int
+    tool_timeout: int
 
 
 # 加载用户级 ~/.hcode/config.toml，返回键值字典
@@ -117,6 +130,10 @@ def load_config() -> Config:
         log_level=_coerce_str("log_level", merged["log_level"]),
         log_file=_coerce_str("log_file", merged["log_file"]),
         log_format=_coerce_str("log_format", merged["log_format"]),
+        anthropic_api_key=_coerce_str("anthropic_api_key", merged["anthropic_api_key"]),
+        anthropic_model=_coerce_str("anthropic_model", merged["anthropic_model"]),
+        max_steps=_coerce_int("max_steps", merged["max_steps"]),
+        tool_timeout=_coerce_int("tool_timeout", merged["tool_timeout"]),
     )
 
 

@@ -112,6 +112,46 @@ def test_unknown_config_key_causes_hard_exit(monkeypatch, tmp_path):
 # 功能：验证 Config 是 frozen dataclass，不可修改
 # 设计：尝试修改属性触发 FrozenInstanceError
 def test_config_is_frozen():
-    cfg = Config(host="127.0.0.1", port=47201, log_level="INFO", log_file="", log_format="console")
+    cfg = Config(
+        host="127.0.0.1", port=47201, log_level="INFO", log_file="", log_format="console",
+        anthropic_api_key="", anthropic_model="sonnet", max_steps=20, tool_timeout=60,
+    )
     with pytest.raises(Exception):  # dataclasses.FrozenInstanceError
         cfg.port = 9999  # type: ignore[misc]
+
+
+# 功能：验证新增的 anthropic_api_key 默认值为空字符串
+# 设计：不设任何外部配置，API key 应为空
+def test_anthropic_api_key_defaults_to_empty():
+    cfg = load_config()
+    assert cfg.anthropic_api_key == ""
+
+
+# 功能：验证环境变量 HCODE_ANTHROPIC_API_KEY 覆盖 key
+# 设计：设置环境变量后断言生效
+def test_env_var_overrides_anthropic_api_key(monkeypatch):
+    monkeypatch.setenv("HCODE_ANTHROPIC_API_KEY", "sk-ant-xxx")
+    cfg = load_config()
+    assert cfg.anthropic_api_key == "sk-ant-xxx"
+
+
+# 功能：验证 anthropic_model 默认值
+# 设计：默认模型
+def test_anthropic_model_default():
+    cfg = load_config()
+    assert isinstance(cfg.anthropic_model, str)
+    assert len(cfg.anthropic_model) > 0
+
+
+# 功能：验证 max_steps 默认值为 20
+# 设计：不配置时使用 20 步上限
+def test_max_steps_default():
+    cfg = load_config()
+    assert cfg.max_steps == 20
+
+
+# 功能：验证 tool_timeout 默认值为 60 秒
+# 设计：bash 工具默认 60s 超时
+def test_tool_timeout_default():
+    cfg = load_config()
+    assert cfg.tool_timeout == 60
