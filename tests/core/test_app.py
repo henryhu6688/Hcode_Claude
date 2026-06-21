@@ -84,3 +84,81 @@ async def test_daemon_ping_pong(free_port: int, tmp_path: Path):
         except subprocess.TimeoutExpired:
             proc.kill()
             proc.wait()
+
+
+# 功能：验证 agent.run 的端到端流程——启动 daemon → 发 run 请求 → 等待完成
+# 设计：用 free_port + 子进程 daemon，传入简单 goal 验证返回 RunResult
+@pytest.mark.asyncio
+async def test_daemon_agent_run(free_port: int, tmp_path: Path):
+    import os
+    api_key = os.environ.get("ANTHROPIC_API_KEY", "")
+    if not api_key:
+        pytest.skip("ANTHROPIC_API_KEY not set")
+
+    env = os.environ.copy()
+    env["PYTHONPATH"] = "src"
+    env["HCODE_PORT"] = str(free_port)
+    env["HCODE_LOG_FILE"] = str(tmp_path / "hcode.log")
+    env["HCODE_HOME"] = str(tmp_path)
+    env["HCODE_ANTHROPIC_API_KEY"] = api_key
+
+    proc = subprocess.Popen(
+        [sys.executable, "-m", "hcode_claude.core.app"],
+        env=env,
+        stdout=subprocess.PIPE,
+        stderr=subprocess.PIPE,
+    )
+
+    try:
+        # 轮询等待 daemon TCP 就绪
+        connected = False
+        for _ in range(50):
+            try:
+                reader, writer = await asyncio.wait_for(
+                    asyncio.open_connection("127.0.0.1", free_port),
+                    timeout=0.3,
+                )
+                connected = True
+                break
+            except (TimeoutError, ConnectionRefusedError, OSError):
+                if proc.poll() is not None:
+                    stdout, stderr = proc.communicate()
+                    pytest.fail(
+                        f"Daemon exited early (code={proc.returncode})\n"
+                        f"stdout: {stdout.decode()}\nstderr: {stderr.decode()}"
+                    )
+                await asyncio.sleep(0.1)
+
+        assert connected, "Cannot connect to daemon after 5s"
+
+        # 发送 agent.run
+        run_id = "integration-test"
+        request = json.dumps({
+            "jsonrpc": "2.0",
+            "id": run_id,
+            "method": "agent.run",
+            "params": {"goal": "echo hello_from_integration_test"},
+        }) + "\n"
+        writer.write(request.encode())
+        await writer.drain()
+
+        # 读取响应（等待 Agent 执行完成）
+        line = await asyncio.wait_for(reader.readline(), timeout=120.0)
+        response = json.loads(line.decode())
+        writer.close()
+
+        # 校验 RunResult
+        assert "result" in response, f"Expected success, got: {response}"
+        assert response["id"] == run_id
+        result = response["result"]
+        assert result["type"] == "run.result"
+        assert result["status"] in ("completed", "max_steps", "error")
+        assert result["steps"] >= 0
+
+    finally:
+        proc.terminate()
+        try:
+            proc.wait(timeout=5)
+        except subprocess.TimeoutExpired:
+            proc.kill()
+            proc.wait()
