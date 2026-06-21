@@ -2,6 +2,7 @@
 
 import asyncio
 from abc import ABC, abstractmethod
+from typing import Any
 
 from anthropic import AsyncAnthropic
 
@@ -15,8 +16,8 @@ class BaseProvider(ABC):
     @abstractmethod
     async def chat(
         self,
-        messages: list[dict],
-        tools: list[dict] | None,
+        messages: list[dict[str, Any]],
+        tools: list[dict[str, Any]] | None,
         system: str,
     ) -> ChatResult: ...
 
@@ -32,8 +33,8 @@ class AnthropicProvider(BaseProvider):
     # 流式调用 Anthropic API，带重试和 prompt caching
     async def chat(
         self,
-        messages: list[dict],
-        tools: list[dict] | None,
+        messages: list[dict[str, Any]],
+        tools: list[dict[str, Any]] | None,
         system: str,
     ) -> ChatResult:
         system_blocks = self._with_cache_control(system)
@@ -53,11 +54,11 @@ class AnthropicProvider(BaseProvider):
     # 执行单次 API 调用：构造请求 → 流式接收 → 收集 text + tool_uses
     async def _do_chat(
         self,
-        messages: list[dict],
-        tools: list[dict] | None,
-        system_blocks: list[dict],
+        messages: list[dict[str, Any]],
+        tools: list[dict[str, Any]] | None,
+        system_blocks: list[dict[str, Any]],
     ) -> ChatResult:
-        kwargs: dict = {
+        kwargs: dict[str, Any] = {
             "model": self._model,
             "max_tokens": 4096,
             "messages": messages,
@@ -67,7 +68,7 @@ class AnthropicProvider(BaseProvider):
             kwargs["tools"] = tools
 
         text_parts: list[str] = []
-        tool_uses: dict[int, dict] = {}  # index → {id, name, input}
+        tool_uses: dict[int, dict[str, str]] = {}  # index → {id, name, input_str}
         input_tokens = 0
         output_tokens = 0
 
@@ -118,14 +119,16 @@ class AnthropicProvider(BaseProvider):
 
     # 给 system prompt 最后 2 段加 cache_control
     @staticmethod
-    def _with_cache_control(system: str) -> list[dict]:
+    def _with_cache_control(system: str) -> list[dict[str, Any]]:
         paragraphs = [p for p in system.split("\n\n") if p.strip()]
         if len(paragraphs) <= 2:
             return [
                 {"type": "text", "text": p, "cache_control": {"type": "ephemeral"}}
                 for p in paragraphs
             ]
-        result: list[dict] = [{"type": "text", "text": p} for p in paragraphs[:-2]]
+        result: list[dict[str, Any]] = [
+            {"type": "text", "text": p} for p in paragraphs[:-2]
+        ]
         for p in paragraphs[-2:]:
             result.append({
                 "type": "text",
@@ -136,7 +139,7 @@ class AnthropicProvider(BaseProvider):
 
     # 给 tools 列表最后一条加 cache_control
     @staticmethod
-    def _add_tool_cache_control(tools: list[dict]) -> list[dict]:
+    def _add_tool_cache_control(tools: list[dict[str, Any]]) -> list[dict[str, Any]]:
         if not tools:
             return tools
         result = list(tools)

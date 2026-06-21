@@ -21,7 +21,10 @@ class FakeProvider(BaseProvider):
         self, messages: list[dict], tools: list[dict] | None, system: str
     ) -> ChatResult:
         if self.called >= len(self.responses):
-            return ChatResult(text="done", tool_uses=[], usage={"input_tokens": 0, "output_tokens": 0})
+            return ChatResult(
+                text="done", tool_uses=[],
+                usage={"input_tokens": 0, "output_tokens": 0},
+            )
         result = self.responses[self.called]
         self.called += 1
         return result
@@ -85,9 +88,10 @@ async def test_loop_max_steps_triggers():
 async def test_loop_invokes_tool_and_continues():
     ctx = ExecutionContext()
     tu1 = ToolUseBlock(id="tu1", name="fake_tool", input={"x": 1})
+    usage10_5 = {"input_tokens": 10, "output_tokens": 5}
     provider = FakeProvider([
-        ChatResult(text="lets check", tool_uses=[tu1], usage={"input_tokens": 10, "output_tokens": 5}),
-        ChatResult(text="done after tool", tool_uses=[], usage={"input_tokens": 10, "output_tokens": 5}),
+        ChatResult(text="lets check", tool_uses=[tu1], usage=usage10_5),
+        ChatResult(text="done after tool", tool_uses=[], usage=usage10_5),
     ])
     registry = ToolRegistry()
     registry.register(FakeTool())
@@ -117,9 +121,10 @@ async def test_loop_handles_tool_error_gracefully():
 
     ctx = ExecutionContext()
     tu1 = ToolUseBlock(id="t1", name="crash", input={})
+    usage1_1 = {"input_tokens": 1, "output_tokens": 1}
     provider = FakeProvider([
-        ChatResult(text="", tool_uses=[tu1], usage={"input_tokens": 1, "output_tokens": 1}),
-        ChatResult(text="ok after crash", tool_uses=[], usage={"input_tokens": 1, "output_tokens": 1}),
+        ChatResult(text="", tool_uses=[tu1], usage=usage1_1),
+        ChatResult(text="ok after crash", tool_uses=[], usage=usage1_1),
     ])
     registry = ToolRegistry()
     registry.register(CrashingTool())

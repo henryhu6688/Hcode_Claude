@@ -21,7 +21,7 @@ class ToolRegistry:
         return self._tools[name]
 
     # 导出 Anthropic API 兼容的 tools 列表
-    def as_anthropic_tools(self) -> list[dict]:
+    def as_anthropic_tools(self) -> list[dict[str, object]]:
         return [
             {
                 "name": t.name,

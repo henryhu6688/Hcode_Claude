@@ -49,7 +49,7 @@ class BashTool(BaseTool):
             if err:
                 parts.append(f"[stderr]\n{err}")
             return "\n".join(parts) if parts else f"(exit code {proc.returncode})"
-        except asyncio.TimeoutError:
+        except TimeoutError:
             return "Error: command timed out"
         except Exception as e:
             return f"Error: {e}"

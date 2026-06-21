@@ -69,13 +69,15 @@ class CoreApp:
     async def _handle_run(self, params: dict[str, object]) -> RunResult:
         goal = str(params.get("goal", ""))
         max_steps_raw = params.get("max_steps", 20)
-        max_steps = int(max_steps_raw) if max_steps_raw else 20  # type: ignore[arg-type]
+        max_steps = int(str(max_steps_raw)) if max_steps_raw else 20
 
         run_dir = Path.cwd() / ".hcode" / "runs" / uuid4().hex[:8]
         run_dir.mkdir(parents=True, exist_ok=True)
 
         runner = AgentRunner()
-        result = await runner.run(goal=goal, run_dir=run_dir)
+        result = await runner.run(
+            goal=goal, run_dir=run_dir, max_steps=max_steps,
+        )
         return RunResult(
             type="run.result",
             run_id=result.run_id,

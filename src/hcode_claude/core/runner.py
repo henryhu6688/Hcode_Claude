@@ -22,7 +22,7 @@ class AgentRunner:
     """整条 Agent 执行链路的起点——组装所有模块并启动循环"""
 
     # 运行一次 Agent 执行：初始化组件 → 启动事件管线 → 循环 → 返回结果
-    async def run(self, goal: str, run_dir: Path) -> RunResult:
+    async def run(self, goal: str, run_dir: Path, max_steps: int = 20) -> RunResult:
         cfg = load_config()
         run_id = run_dir.name
 
@@ -57,7 +57,7 @@ class AgentRunner:
         # 6. 创建 AgentLoop + 运行
         try:
             loop = AgentLoop(ctx, provider, registry, bus)
-            result = await loop.run(goal, max_steps=cfg.max_steps)
+            result = await loop.run(goal, max_steps=max_steps)
         except Exception as e:
             finished = RunFinishedEvent(
                 type="run.finished", run_id=run_id, status="error", steps=0,

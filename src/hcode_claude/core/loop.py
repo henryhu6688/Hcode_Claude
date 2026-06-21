@@ -1,4 +1,4 @@
-"""Agent 核心循环——每步 plan（调 LLM）→ observe（追加 assistant 消息）→ act（执行工具）→ observe（追加结果）"""
+"""Agent 核心循环——plan→observe→act→observe 循环，管理 LLM 调用与工具执行"""
 
 from hcode_claude.core.context import ExecutionContext
 from hcode_claude.core.events.bus import EventBus

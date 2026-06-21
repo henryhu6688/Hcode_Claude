@@ -1,0 +1,15 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(PYTHONPATH=src uv run pytest tests/core/tools/test_registry.py -v)",
+      "Bash(PYTHONPATH=src uv run pytest tests/core/tools/test_builtin_tools.py -v)",
+      "Bash(PYTHONPATH=src uv run pytest tests/core/test_config.py -v)",
+      "Bash(uv sync *)",
+      "Bash(PYTHONPATH=src uv run pytest tests/core/llm/test_provider.py -v)",
+      "Bash(PYTHONPATH=src uv run pytest tests/core/test_context.py -v)",
+      "Bash(PYTHONPATH=src uv run pytest tests/core/test_loop.py -v)",
+      "Bash(PYTHONPATH=src uv run pytest tests/core/test_runner.py -v)",
+      "Bash(PYTHONPATH=src uv run python -c \"from hcode_claude.core.app import CoreApp; print\\('OK'\\)\")"
+    ]
+  }
+}
